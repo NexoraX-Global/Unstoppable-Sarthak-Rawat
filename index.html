@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#070d19" />
+  <title>INDIAN SUBWAY SURF — 3D Endless Railway Runner</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Pinned Three.js r128 from reliable CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="app-root">
+    <!-- 3D WebGL Viewport Container -->
+    <div id="canvas-container" aria-label="3D Game Viewport"></div>
+
+    <!-- Speed Vignette FX Overlay -->
+    <div id="fx-overlay" class="hidden"></div>
+
+    <!-- SCREEN 1: LOADING & DIAGNOSTIC -->
+    <section id="screen-loading" class="overlay-screen" role="dialog" aria-labelledby="loading-title">
+      <div class="panel">
+        <div class="brand-badge">INDIAN RAILWAYS TRACTION CORRIDOR // WR-01</div>
+        <h1 id="loading-title" class="game-title">INDIAN SUBWAY SURF</h1>
+        <p id="loading-status" class="subtitle">Building Stylized 3D Characters, WAP-7 Locomotives &amp; Track Geometry...</p>
+        <div class="progress-bar-outer" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+          <div id="loading-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <div id="diagnostic-box" class="diagnostic-box hidden">
+          <p id="diagnostic-message"></p>
+          <button id="btn-retry-load" class="btn btn-primary">Retry Initialization</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: MAIN MENU -->
+    <section id="screen-menu" class="overlay-screen hidden" role="dialog" aria-labelledby="menu-title">
+      <header class="top-bar">
+        <div class="stat-pill">
+          <span class="stat-label">BEST SCORE</span>
+          <span id="menu-best-score" class="stat-value">0</span>
+        </div>
+        <div class="stat-pill gold">
+          <span class="stat-label">BANKED COINS</span>
+          <span id="menu-banked-coins" class="stat-value">0</span>
+        </div>
+      </header>
+
+      <div class="menu-center">
+        <div class="brand-badge">BROAD GAUGE EXPRESS RUNNER</div>
+        <h1 id="menu-title" class="game-title">INDIAN SUBWAY SURF</h1>
+        <p class="subtitle">Stylized 3D Runner &bull; WAP-7 &amp; LHB Rolling Stock &bull; Active RPF Chase</p>
+
+        <!-- Active Directive / Mission Card -->
+        <div class="mission-card">
+          <div class="mission-header">
+            <span class="mission-tag">ACTIVE DIRECTIVE</span>
+            <span id="menu-mission-reward" class="mission-reward">+60 COINS</span>
+          </div>
+          <p id="menu-mission-desc" class="mission-desc">Collect 30 Coins in a single run</p>
+          <div class="mission-progress-bg">
+            <div id="menu-mission-fill" class="mission-progress-fill" style="width: 0%"></div>
+          </div>
+          <span id="menu-mission-status" class="mission-status-text">0 / 30</span>
+        </div>
+
+        <!-- Outfit & Weather Selector -->
+        <div class="selector-group">
+          <span class="selector-label">OUTFIT &amp; CORRIDOR WEATHER</span>
+          <div class="selector-row">
+            <button id="btn-skin-cycle" class="btn btn-secondary" aria-label="Change Runner Outfit">
+              Outfit: <strong id="label-skin-name">Mumbai Street</strong>
+            </button>
+            <button id="btn-env-cycle" class="btn btn-secondary" aria-label="Change Time and Weather">
+              Weather: <strong id="label-env-name">Daylight Clear</strong>
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-launch-run" class="btn btn-primary btn-large">LAUNCH RUN</button>
+          <div class="menu-sub-actions">
+            <button id="btn-open-tutorial" class="btn btn-outline">HOW TO PLAY</button>
+            <button id="btn-open-settings" class="btn btn-outline">SETTINGS</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: GAMEPLAY HUD -->
+    <section id="screen-hud" class="hud-layer hidden" aria-label="Gameplay Heads Up Display">
+      <div class="hud-top">
+        <div class="hud-stats-left">
+          <div class="hud-box">
+            <span class="hud-label">SCORE <em id="hud-multiplier" class="multiplier-badge">x1</em></span>
+            <span id="hud-score" class="hud-value">0</span>
+          </div>
+          <div class="hud-row-mini">
+            <div class="hud-box-mini">
+              <span class="hud-label">DIST</span>
+              <span id="hud-distance" class="hud-value-sm">0m</span>
+            </div>
+            <div class="hud-box-mini gold">
+              <span class="hud-label">COINS</span>
+              <span id="hud-coins" class="hud-value-sm">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-top-right" style="display: flex; gap: 8px;">
+          <button id="btn-hud-music" class="btn-icon" aria-label="Toggle Background Music" title="Toggle Music">&#9835;</button>
+          <button id="btn-pause" class="btn-icon" aria-label="Pause Game">&#10074;&#10074;</button>
+        </div>
+      </div>
+
+      <!-- Real-Time RPF Inspector Chase Status Bar -->
+      <div class="pursuit-bar-wrapper" aria-label="RPF Inspector Chase Distance">
+        <span class="pursuit-label">RPF INSPECTOR</span>
+        <div class="pursuit-track">
+          <div id="hud-pursuit-fill" class="pursuit-fill" style="width: 55%"></div>
+        </div>
+        <span id="hud-pursuit-state" class="pursuit-state">CHASING (4.2m)</span>
+      </div>
+
+      <!-- Active Power-Up Timers -->
+      <div id="hud-powerups" class="hud-powerups" aria-live="polite"></div>
+
+      <!-- Feedback Toast Banner -->
+      <div id="hud-toast" class="hud-toast hidden"></div>
+
+      <!-- Mobile On-Screen Touch D-Pad Controls -->
+      <div id="touch-controls" class="touch-controls">
+        <button id="btn-move-left" class="touch-btn" aria-label="Move Left Lane">&#9664;</button>
+        <div class="touch-vertical-group">
+          <button id="btn-move-jump" class="touch-btn" aria-label="Jump">&#9650;</button>
+          <button id="btn-move-slide" class="touch-btn" aria-label="Slide">&#9660;</button>
+        </div>
+        <button id="btn-move-right" class="touch-btn" aria-label="Move Right Lane">&#9654;</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 4: PAUSE OVERLAY -->
+    <section id="screen-pause" class="overlay-screen hidden" role="dialog" aria-labelledby="pause-title">
+      <div class="panel">
+        <div class="brand-badge">SIMULATION PAUSED</div>
+        <h2 id="pause-title" class="section-title">GAME PAUSED</h2>
+        <div class="pause-stats">
+          <div><span>Current Score:</span> <strong id="pause-score">0</strong></div>
+          <div><span>Run Distance:</span> <strong id="pause-distance">0m</strong></div>
+          <div><span>Run Coins:</span> <strong id="pause-coins">0</strong></div>
+        </div>
+        <div class="menu-actions">
+          <button id="btn-resume" class="btn btn-primary btn-large">RESUME RUN</button>
+          <button id="btn-pause-restart" class="btn btn-secondary">RESTART RUN</button>
+          <button id="btn-pause-settings" class="btn btn-outline">SETTINGS</button>
+          <button id="btn-pause-menu" class="btn btn-danger">MAIN MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 5: GAME OVER -->
+    <section id="screen-gameover" class="overlay-screen hidden" role="dialog" aria-labelledby="gameover-title">
+      <div class="panel">
+        <div class="brand-badge alert">SIGNAL HALT // RUN TERMINATED</div>
+        <h2 id="gameover-title" class="section-title">BUSTED ON THE TRACKS</h2>
+        <p id="gameover-reason" class="subtitle">Apprehended by RPF Inspector</p>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">FINAL SCORE</span>
+            <span id="go-score" class="stat-big">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">BEST SCORE</span>
+            <span id="go-best" class="stat-big highlight">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">DISTANCE</span>
+            <span id="go-distance" class="stat-big">0m</span>
+          </div>
+          <div class="stat-card gold">
+            <span class="stat-label">RUN COINS (+BANK)</span>
+            <span id="go-coins" class="stat-big">0</span>
+          </div>
+        </div>
+
+        <div class="mission-card compact">
+          <div class="mission-header">
+            <span class="mission-tag">DIRECTIVE PROGRESS</span>
+            <span id="go-mission-status" class="mission-reward">0 / 30</span>
+          </div>
+          <p id="go-mission-desc" class="mission-desc">Collect 30 Coins in a single run</p>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-go-restart" class="btn btn-primary btn-large">PLAY AGAIN</button>
+          <button id="btn-go-menu" class="btn btn-outline">MAIN MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 6: SETTINGS MODAL -->
+    <section id="screen-settings" class="overlay-screen hidden" role="dialog" aria-labelledby="settings-title">
+      <div class="panel scrollable-panel">
+        <h2 id="settings-title" class="section-title">ENGINE &amp; AUDIO SETTINGS</h2>
+        <div class="settings-list">
+          <div class="setting-item">
+            <label for="input-master-vol">Master Volume</label>
+            <input type="range" id="input-master-vol" min="0" max="100" value="80" />
+          </div>
+          <div class="setting-item">
+            <label for="input-music-vol">Music Volume</label>
+            <input type="range" id="input-music-vol" min="0" max="100" value="75" />
+          </div>
+          <div class="setting-item">
+            <label for="input-sfx-vol">SFX Volume</label>
+            <input type="range" id="input-sfx-vol" min="0" max="100" value="85" />
+          </div>
+          <div class="setting-item">
+            <label for="btn-toggle-music">Background Music</label>
+            <button id="btn-toggle-music" class="btn btn-small">ON</button>
+          </div>
+          <div class="setting-item">
+            <label for="btn-toggle-mute">Mute All Audio</label>
+            <button id="btn-toggle-mute" class="btn btn-small">UNMUTED</button>
+          </div>
+          <div class="setting-item">
+            <label for="select-quality">Graphics Quality</label>
+            <select id="select-quality" class="select-box">
+              <option value="LOW">LOW (Fastest Mobile FPS)</option>
+              <option value="MEDIUM" selected>MEDIUM (Balanced Shadows)</option>
+              <option value="HIGH">HIGH (Sharp Hi-DPI &amp; Soft Shadows)</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="btn-toggle-shake">Camera Shake FX</label>
+            <button id="btn-toggle-shake" class="btn btn-small">ON</button>
+          </div>
+          <div class="setting-item">
+            <label for="btn-toggle-dpad">On-Screen Touch D-Pad</label>
+            <button id="btn-toggle-dpad" class="btn btn-small">SHOW</button>
+          </div>
+          <div class="setting-item">
+            <label for="select-sensitivity">Swipe Sensitivity</label>
+            <select id="select-sensitivity" class="select-box">
+              <option value="LOW">Low (Longer Swipes)</option>
+              <option value="NORMAL" selected>Normal</option>
+              <option value="HIGH">High (Fast Flicks)</option>
+            </select>
+          </div>
+        </div>
+        <div class="menu-sub-actions">
+          <button id="btn-reset-save" class="btn btn-danger btn-small">RESET SAVE DATA</button>
+          <button id="btn-close-settings" class="btn btn-primary">SAVE &amp; CLOSE</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 7: TUTORIAL MODAL -->
+    <section id="screen-tutorial" class="overlay-screen hidden" role="dialog" aria-labelledby="tutorial-title">
+      <div class="panel scrollable-panel">
+        <div class="brand-badge">RUNNER TRAINING BRIEFING</div>
+        <h2 id="tutorial-title" class="section-title">HOW TO SURVIVE THE RAILS</h2>
+        <ul class="tutorial-list">
+          <li><strong>SWITCH LANES:</strong> Swipe Left/Right (or tap &#9664; / &#9654; or A/D keys) to weave across the 3 broad-gauge tracks.</li>
+          <li><strong>HIGH-JUMP ONTO TRAINS &amp; OVER BARRIERS:</strong> Swipe Up (or tap &#9650; or W/Space) to leap high over barricades or land directly on top of WAP-7 &amp; LHB train roofs!</li>
+          <li><strong>SLIDE UNDER GANTRIES:</strong> Swipe Down (or tap &#9660; or S/Down) to tuck and slide beneath high overhead signal boards, or fast-drop mid-air.</li>
+          <li><strong>WATCH THE RPF INSPECTOR:</strong> Grazing a train or hitting a barrier alerts the uniformed officer behind you. If you crash or stumble when he is close, he will sprint up and apprehend you!</li>
+          <li><strong>POWER-UPS:</strong>
+            <ul>
+              <li><em>Aero Thruster (Jetpack):</em> Soar high above every train and collect aerial gold coin ribbons.</li>
+              <li><em>Flux Magnet:</em> Pulls coins from all 3 lanes automatically.</li>
+              <li><em>Overdrive Surge:</em> Boosts speed and doubles your score multiplier.</li>
+              <li><em>Kavach Shield:</em> Absorbs one direct obstacle or train collision safely.</li>
+            </ul>
+          </li>
+        </ul>
+        <button id="btn-close-tutorial" class="btn btn-primary btn-large">GOT IT — LET'S RUN</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="main.js"></script>  <style>
+    html, body, body > div {
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      overflow: hidden !important;
+    }
+  </style>
+  <script>
+    function fixMobileViewport() {
+      var realHeight = window.innerHeight + 'px';
+      document.documentElement.style.setProperty('height', realHeight, 'important');
+      document.body.style.setProperty('height', realHeight, 'important');
+
+      var mainWrapper = document.body.firstElementChild;
+      if (mainWrapper) {
+        mainWrapper.style.setProperty('height', realHeight, 'important');
+        mainWrapper.style.setProperty('max-height', realHeight, 'important');
+      }
+
+      try {
+        for (var i = 0; i < document.styleSheets.length; i++) {
+          var rules = document.styleSheets[i].cssRules;
+          for (var j = 0; j < rules.length; j++) {
+            if (rules[j].style) {
+              if (rules[j].style.height === '100vh') rules[j].style.height = realHeight;
+              if (rules[j].style.minHeight === '100vh') rules[j].style.minHeight = realHeight;
+              if (rules[j].style.maxHeight === '100vh') rules[j].style.maxHeight = realHeight;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('load', fixMobileViewport);
+    window.addEventListener('resize', fixMobileViewport);
+    fixMobileViewport();
+  </script>
+
+</body>
+</html>
